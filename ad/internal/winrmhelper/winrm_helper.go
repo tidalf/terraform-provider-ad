@@ -150,7 +150,7 @@ func RunWinRMCommand(conn *winrm.Client, cmds []string, json, forceArray, execLo
 	encodedCmd := winrm.Powershell(cmd)
 
 	if passCredentials {
-	        log.Printf("[DEBUG] Running command %s via powershell", cmd_redacted)
+		log.Printf("[DEBUG] Running command %s via powershell", cmd_redacted)
 		log.Printf("[DEBUG] Encoded command: %s", encodedCmdRedacted)
 	} else {
 		log.Printf("[DEBUG] Running command %s via powershell", cmd)

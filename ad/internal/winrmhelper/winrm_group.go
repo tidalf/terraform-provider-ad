@@ -154,7 +154,7 @@ func GetGroupFromResource(d *schema.ResourceData) *Group {
 // retrieved from the AD Controller.
 func GetGroupFromHost(client *winrm.Client, guid string, execLocally, passCredentials bool, username, password string) (*Group, error) {
 	cmd := fmt.Sprintf("Get-ADGroup -identity %q -properties *", guid)
-        result, err := RunWinRMCommand(client, []string{cmd}, true, false, execLocally, passCredentials, username, password)
+	result, err := RunWinRMCommand(client, []string{cmd}, true, false, execLocally, passCredentials, username, password)
 
 	if err != nil {
 		return nil, err
