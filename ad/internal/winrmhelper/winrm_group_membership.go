@@ -151,17 +151,9 @@ func unmarshalGroupMembership(input []byte) ([]*GroupMember, error) {
 }
 
 func (g *GroupMembership) Delete(client *winrm.Client, execLocally, passCredentials bool, username, password string) error {
-        cmd := fmt.Sprintf("Get-ADGroupMember %q", g.GroupGUID)
-        result, err := RunWinRMCommand(client, []string{cmd}, false, false, execLocally, passCredentials, username, password)
+        gm, err := NewGroupMembershipFromHost ( client, g.GroupGUID, execLocally, passCredentials, username, password)
         if err != nil {
-                return fmt.Errorf("while running Get-ADGroupMember: %s", err)
-        } else if result.ExitCode != 0 && !strings.Contains(result.StdErr, "InvalidData") { 
-                return fmt.Errorf("command Get-ADGroupMember exited with a non-zero exit code(%d), stderr: %s, stdout: %s", result.ExitCode, result.StdErr, result.Stdout)
-        }
-
-        gm, err := unmarshalGroupMembership([]byte(result.Stdout))   
-        if err != nil {
-                return fmt.Errorf("while unmarshalling group membership response: %s", err)
+                return fmt.Errorf("while newgroupmembershipfromshost response: %s", err)
         }
 
 	cmd2 := fmt.Sprintf("Remove-ADGroupMember %q -Members:%q -Confirm:$false", g.GroupGUID, gm)
