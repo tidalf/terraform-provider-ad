@@ -155,18 +155,15 @@ func (g *GroupMembership) Delete(client *winrm.Client, execLocally, passCredenti
         if err != nil {
                 return fmt.Errorf("while newgroupmembershipfromshost response: %s", err)
         }
-        var toRemove []string
         for _, member := range gm.GroupMembers {
-               toRemove = append(toRemove, member.Name)
-        }
-
-	cmd2 := fmt.Sprintf("Remove-ADGroupMember %q -Members:%q -Confirm:$false", g.GroupGUID, strings.Join(toRemove, ","))
-	result2, err := RunWinRMCommand(client, []string{cmd2}, false, false, execLocally, passCredentials, username, password)
-	if err != nil {
-		return fmt.Errorf("while running Remove-ADGroupMember: %s", err)
-	} else if result2.ExitCode != 0 && !strings.Contains(result2.StdErr, "InvalidData") {
+	  cmd2 := fmt.Sprintf("Remove-ADGroupMember %q -Members:%q -Confirm:$false", g.GroupGUID, member.Name)
+	  result2, err := RunWinRMCommand(client, []string{cmd2}, false, false, execLocally, passCredentials, username, password)
+	  if err != nil {
+ 		return fmt.Errorf("while running Remove-ADGroupMember: %s", err)
+   	  } else if result2.ExitCode != 0 && !strings.Contains(result2.StdErr, "InvalidData") {
 		return fmt.Errorf("command Remove-ADGroupMember exited with a non-zero exit code(%d), stderr: %s, stdout: %s", result2.ExitCode, result2.StdErr, result2.Stdout)
-	}
+ 	  }
+        }
 	return nil
 }
 
