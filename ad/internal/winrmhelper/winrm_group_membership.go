@@ -155,8 +155,12 @@ func (g *GroupMembership) Delete(client *winrm.Client, execLocally, passCredenti
         if err != nil {
                 return fmt.Errorf("while newgroupmembershipfromshost response: %s", err)
         }
+        var toRemove []string
+        for _, member := range gm.GroupMembers {
+               toRemove = append(toRemove, member.Name)
+        }
 
-	cmd2 := fmt.Sprintf("Remove-ADGroupMember %q -Members:%q -Confirm:$false", g.GroupGUID, gm)
+	cmd2 := fmt.Sprintf("Remove-ADGroupMember %q -Members:%q -Confirm:$false", g.GroupGUID, strings.Join(toRemove, ","))
 	result2, err := RunWinRMCommand(client, []string{cmd2}, false, false, execLocally, passCredentials, username, password)
 	if err != nil {
 		return fmt.Errorf("while running Remove-ADGroupMember: %s", err)
