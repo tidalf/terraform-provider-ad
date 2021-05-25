@@ -47,16 +47,6 @@ func diffGroupMemberLists(expectedMembers, existingMembers []*GroupMember) ([]*G
 	return toAdd, toRemove
 }
 
-func unmarshalGroupMembership(input []byte) ([]*GroupMember, error) {
-	var gm []*GroupMember
-	err := json.Unmarshal(input, &gm)
-	if err != nil {
-		return nil, err
-	}
-
-	return gm, nil
-}
-
 func getMembershipList(g []*GroupMember) string {
 	out := []string{}
 	for _, member := range g {
@@ -150,14 +140,36 @@ func (g *GroupMembership) Create(client *winrm.Client, execLocally, passCredenti
 
 	return nil
 }
+func unmarshalGroupMembership(input []byte) ([]*GroupMember, error) {
+	var gm []*GroupMember
+	err := json.Unmarshal(input, &gm)
+	if err != nil {
+		return nil, err
+	}
+
+	return gm, nil
+}
 
 func (g *GroupMembership) Delete(client *winrm.Client, execLocally, passCredentials bool, username, password string) error {
-	cmd := fmt.Sprintf("Remove-ADGroupMember %q -Members (Get-ADGroupMember %q) -Confirm:$false", g.GroupGUID, g.GroupGUID)
-	result, err := RunWinRMCommand(client, []string{cmd}, false, false, execLocally, passCredentials, username, password)
+        cmd := fmt.Sprintf("Get-ADGroupMember %q", g.GroupGUID)
+        result, err := RunWinRMCommand(client, []string{cmd}, false, false, execLocally, passCredentials, username, password)
+        if err != nil {
+                return fmt.Errorf("while running Get-ADGroupMember: %s", err)
+        } else if result.ExitCode != 0 && !strings.Contains(result.StdErr, "InvalidData") { 
+                return fmt.Errorf("command Get-ADGroupMember exited with a non-zero exit code(%d), stderr: %s, stdout: %s", result.ExitCode, result.StdErr, result.Stdout)
+        }
+
+        gm, err := unmarshalGroupMembership([]byte(result.Stdout))   
+        if err != nil {
+                return fmt.Errorf("while unmarshalling group membership response: %s", err)
+        }
+
+	cmd2 := fmt.Sprintf("Remove-ADGroupMember %q -Members:%q -Confirm:$false", g.GroupGUID, gm)
+	result2, err := RunWinRMCommand(client, []string{cmd2}, false, false, execLocally, passCredentials, username, password)
 	if err != nil {
 		return fmt.Errorf("while running Remove-ADGroupMember: %s", err)
-	} else if result.ExitCode != 0 && !strings.Contains(result.StdErr, "InvalidData") {
-		return fmt.Errorf("command Remove-ADGroupMember exited with a non-zero exit code(%d), stderr: %s, stdout: %s", result.ExitCode, result.StdErr, result.Stdout)
+	} else if result2.ExitCode != 0 && !strings.Contains(result2.StdErr, "InvalidData") {
+		return fmt.Errorf("command Remove-ADGroupMember exited with a non-zero exit code(%d), stderr: %s, stdout: %s", result2.ExitCode, result2.StdErr, result2.Stdout)
 	}
 	return nil
 }
