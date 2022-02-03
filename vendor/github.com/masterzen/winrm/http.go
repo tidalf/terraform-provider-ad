@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -29,7 +28,7 @@ func body(response *http.Response) (string, error) {
 			}
 		}()
 		if err != nil {
-			return "", fmt.Errorf("error while reading request body %w", err)
+			return "", fmt.Errorf("error while reading request body %s", err)
 		}
 
 		return string(body), nil
@@ -40,8 +39,7 @@ func body(response *http.Response) (string, error) {
 
 type clientRequest struct {
 	transport http.RoundTripper
-	dial      func(network, addr string) (net.Conn, error)
-	proxyfunc func(req *http.Request) (*url.URL, error)
+	dial func(network, addr string) (net.Conn, error)
 }
 
 func (c *clientRequest) Transport(endpoint *Endpoint) error {
@@ -55,18 +53,13 @@ func (c *clientRequest) Transport(endpoint *Endpoint) error {
 		dial = c.dial
 	}
 
-	proxyfunc := http.ProxyFromEnvironment
-	if c.proxyfunc != nil {
-		proxyfunc = c.proxyfunc
-	}
-
 	transport := &http.Transport{
-		Proxy: proxyfunc,
+		Proxy: http.ProxyFromEnvironment,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: endpoint.Insecure,
 			ServerName:         endpoint.TLSServerName,
 		},
-		Dial:                  dial,
+		Dial: dial,
 		ResponseHeaderTimeout: endpoint.Timeout,
 	}
 
@@ -90,18 +83,18 @@ func (c clientRequest) Post(client *Client, request *soap.SoapMessage) (string, 
 
 	req, err := http.NewRequest("POST", client.url, strings.NewReader(request.String()))
 	if err != nil {
-		return "", fmt.Errorf("impossible to create http request %w", err)
+		return "", fmt.Errorf("impossible to create http request %s", err)
 	}
 	req.Header.Set("Content-Type", soapXML+";charset=UTF-8")
 	req.SetBasicAuth(client.username, client.password)
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("unknown error %w", err)
+		return "", fmt.Errorf("unknown error %s", err)
 	}
 
 	body, err := body(resp)
 	if err != nil {
-		return "", fmt.Errorf("http response error: %d - %w", resp.StatusCode, err)
+		return "", fmt.Errorf("http response error: %d - %s", resp.StatusCode, err.Error())
 	}
 
 	// if we have different 200 http status code
@@ -115,16 +108,9 @@ func (c clientRequest) Post(client *Client, request *soap.SoapMessage) (string, 
 	return body, err
 }
 
-//NewClientWithDial NewClientWithDial
+
 func NewClientWithDial(dial func(network, addr string) (net.Conn, error)) *clientRequest {
 	return &clientRequest{
-		dial: dial,
-	}
-}
-
-//NewClientWithProxyFunc NewClientWithProxyFunc
-func NewClientWithProxyFunc(proxyfunc func(req *http.Request) (*url.URL, error)) *clientRequest {
-	return &clientRequest{
-		proxyfunc: proxyfunc,
+		dial:dial,
 	}
 }
