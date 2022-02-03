@@ -44,7 +44,6 @@ func xPath(node tree.Node, xpath string) (tree.NodeSet, error) {
 	return nodes, nil
 }
 
-//ParseOpenShellResponse ParseOpenShellResponse
 func ParseOpenShellResponse(response string) (string, error) {
 	doc, err := xmltree.ParseXML(strings.NewReader(response))
 	if err != nil {
@@ -53,7 +52,6 @@ func ParseOpenShellResponse(response string) (string, error) {
 	return first(doc, "//w:Selector[@Name='ShellId']")
 }
 
-//ParseExecuteCommandResponse ParseExecuteCommandResponse
 func ParseExecuteCommandResponse(response string) (string, error) {
 	doc, err := xmltree.ParseXML(strings.NewReader(response))
 	if err != nil {
@@ -62,7 +60,6 @@ func ParseExecuteCommandResponse(response string) (string, error) {
 	return first(doc, "//rsp:CommandId")
 }
 
-//ParseSlurpOutputErrResponse ParseSlurpOutputErrResponse
 func ParseSlurpOutputErrResponse(response string, stdout, stderr io.Writer) (bool, int, error) {
 	var (
 		finished bool
@@ -97,7 +94,6 @@ func ParseSlurpOutputErrResponse(response string, stdout, stderr io.Writer) (boo
 	return finished, exitCode, err
 }
 
-//ParseSlurpOutputResponse ParseSlurpOutputResponse
 func ParseSlurpOutputResponse(response string, stream io.Writer, streamType string) (bool, int, error) {
 	var (
 		finished bool

@@ -3,7 +3,6 @@ package winrm
 import (
 	"bytes"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -47,7 +46,7 @@ func NewClientWithParameters(endpoint *Endpoint, user, password string, params *
 		url:        endpoint.url(),
 		useHTTPS:   endpoint.HTTPS,
 		// default transport
-		http: &clientRequest{dial: params.Dial},
+		http: &clientRequest{ dial:params.Dial },
 	}
 
 	// switch to other transport if provided
@@ -57,7 +56,7 @@ func NewClientWithParameters(endpoint *Endpoint, user, password string, params *
 
 	// set the transport to some endpoint configuration
 	if err := client.http.Transport(endpoint); err != nil {
-		return nil, fmt.Errorf("Can't parse this key and certs: %w", err)
+		return nil, fmt.Errorf("Can't parse this key and certs: %s", err)
 	}
 
 	return client, nil
@@ -131,7 +130,6 @@ func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) (int, e
 
 	cmd.Wait()
 	wg.Wait()
-	cmd.Close()
 
 	return cmd.ExitCode(), cmd.err
 }
@@ -149,13 +147,8 @@ func (c *Client) RunWithString(command string, stdin string) (string, string, in
 	if err != nil {
 		return "", "", 1, err
 	}
-
 	if len(stdin) > 0 {
-		defer cmd.Stdin.Close()
-		_, err := cmd.Stdin.Write([]byte(stdin))
-		if err != nil {
-			return "", "", -1, err
-		}
+		cmd.Stdin.Write([]byte(stdin))
 	}
 
 	var outWriter, errWriter bytes.Buffer
@@ -173,23 +166,8 @@ func (c *Client) RunWithString(command string, stdin string) (string, string, in
 
 	cmd.Wait()
 	wg.Wait()
-	cmd.Close()
 
 	return outWriter.String(), errWriter.String(), cmd.ExitCode(), cmd.err
-}
-
-//RunPSWithString will basically wrap your code to execute commands in powershell.exe. Default RunWithString
-// runs commands in cmd.exe
-func (c *Client) RunPSWithString(command string, stdin string) (string, string, int, error) {
-	command = Powershell(command)
-
-	// Let's check if we actually created a command
-	if command == "" {
-		return "", "", 1, errors.New("cannot encode the given command")
-	}
-
-	// Specify powershell.exe to run encoded command
-	return c.RunWithString(command, stdin)
 }
 
 // RunWithInput will run command on the the remote host, writing the process stdout and stderr to
@@ -212,10 +190,7 @@ func (c Client) RunWithInput(command string, stdout, stderr io.Writer, stdin io.
 	wg.Add(3)
 
 	go func() {
-		defer func() {
-			cmd.Stdin.Close()
-			wg.Done()
-		}()
+		defer wg.Done()
 		io.Copy(cmd.Stdin, stdin)
 	}()
 	go func() {
@@ -229,7 +204,6 @@ func (c Client) RunWithInput(command string, stdout, stderr io.Writer, stdin io.
 
 	cmd.Wait()
 	wg.Wait()
-	cmd.Close()
 
 	return cmd.ExitCode(), cmd.err
 
